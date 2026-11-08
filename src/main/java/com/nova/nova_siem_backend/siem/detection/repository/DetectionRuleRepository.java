@@ -10,4 +10,8 @@ import java.util.UUID;
 @Repository
 public interface DetectionRuleRepository extends JpaRepository<DetectionRule, UUID> {
     List<DetectionRule> findByActiveTrue();
+
+    boolean existsByNameIgnoreCase(String name);
+
+    long countByActiveTrue();
 }

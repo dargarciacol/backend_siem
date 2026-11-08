@@ -1,10 +1,12 @@
 
 package com.nova.nova_siem_backend.siem.detection.service;
 
+import com.nova.nova_siem_backend.siem.common.exception.BusinessException;
 import com.nova.nova_siem_backend.siem.common.exception.ResourceNotFoundException;
+import com.nova.nova_siem_backend.siem.detection.dto.DetectionRuleRequestDTO;
+import com.nova.nova_siem_backend.siem.detection.mapper.DetectionRuleMapper;
 import com.nova.nova_siem_backend.siem.detection.model.DetectionRule;
 import com.nova.nova_siem_backend.siem.detection.repository.DetectionRuleRepository;
-import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
 import com.nova.nova_siem_backend.siem.events.repository.EventRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,11 +20,14 @@ public class DetectionRuleService {
     private final DetectionRuleRepository ruleRepository;
     private final DetectionEngineService detectionEngineService;
     private final EventRepository eventRepository;
+    private final DetectionRuleMapper ruleMapper;
 
     public DetectionRuleService(
             DetectionRuleRepository ruleRepository,
             DetectionEngineService detectionEngineService,
-            EventRepository eventRepository) {
+            EventRepository eventRepository,
+            DetectionRuleMapper ruleMapper) {
+        this.ruleMapper = ruleMapper;
         this.ruleRepository = ruleRepository;
         this.detectionEngineService = detectionEngineService;
         this.eventRepository = eventRepository;
@@ -32,10 +37,21 @@ public class DetectionRuleService {
         return ruleRepository.findAll();
     }
 
-    public DetectionRule createRule(DetectionRule rule) {
+    @Transactional
+    public DetectionRule createRule(DetectionRuleRequestDTO request) {
+        String name = request.getName().trim();
+
+        if (ruleRepository.existsByNameIgnoreCase(name)) {
+            throw new BusinessException("A detection rule named '" + name + "' already exists.");
+        }
+
+        DetectionRule rule = ruleMapper.toEntity(request);
+        rule.setName(name);
+
         return ruleRepository.save(rule);
     }
 
+    @Transactional
     public DetectionRule toggleRuleStatus(UUID id) {
         DetectionRule rule = ruleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
@@ -47,15 +63,12 @@ public class DetectionRuleService {
 
     @Transactional
     public void reprocessHistoricalEvents() {
-        List<UUID> eventIds = eventRepository.findAll()
-                .stream()
-                .map(SecurityEvent::getId)
-                .toList();
-
-        if (eventIds.isEmpty()) {
+        // The engine evaluates the stored events itself; loading every event
+        // into memory just to collect their IDs was unnecessary.
+        if (eventRepository.count() == 0) {
             return;
         }
 
-        detectionEngineService.evaluateEvents(eventIds);
+        detectionEngineService.reprocessHistoricalEvents();
     }
 }

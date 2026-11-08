@@ -1,6 +1,7 @@
 
 package com.nova.nova_siem_backend.siem.ingestion.service;
 
+import com.nova.nova_siem_backend.siem.common.exception.BusinessException;
 import com.nova.nova_siem_backend.siem.events.model.EventSeverity;
 import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
 import com.nova.nova_siem_backend.siem.events.repository.EventRepository;
@@ -15,6 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -155,7 +158,17 @@ public class ExcelIngestionService {
 
                 SecurityEvent event = new SecurityEvent();
 
-                event.setTimestamp(LocalDateTime.now());
+                // Use the real event time when the sheet provides it
+                // (optional "timestamp" / "event_time" column). Without it the
+                // ingestion time is used, which makes time-window rules
+                // (e.g. password spraying) unreliable.
+                LocalDateTime eventTime = parseTimestamp(
+                        row, columns, formatter, evaluator, i + 1
+                );
+
+                event.setTimestamp(
+                        eventTime != null ? eventTime : LocalDateTime.now()
+                );
 
                 event.setUserIdentity(
                         user.isBlank() ? "UNKNOWN" : user
@@ -214,11 +227,71 @@ public class ExcelIngestionService {
 
             return response;
 
+        } catch (BusinessException e) {
+            throw e;
+        } catch (IllegalArgumentException e) {
+            // Validation problems in the file content: client error (400), not 500.
+            throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException(
-                    "Error processing Excel file: " + e.getMessage(), e
+            throw new BusinessException(
+                    "The Excel file could not be read: " + e.getMessage(), e
             );
         }
+    }
+
+    private static final List<DateTimeFormatter> TIMESTAMP_FORMATS = List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+    );
+
+    private LocalDateTime parseTimestamp(
+            Row row,
+            Map<String, Integer> columns,
+            DataFormatter formatter,
+            FormulaEvaluator evaluator,
+            int excelRowNumber) {
+
+        Integer index = columns.get("timestamp");
+
+        if (index == null) {
+            index = columns.get("event_time");
+        }
+
+        if (index == null) {
+            return null;
+        }
+
+        Cell cell = row.getCell(index);
+
+        if (cell == null) {
+            return null;
+        }
+
+        if (cell.getCellType() == CellType.NUMERIC
+                && DateUtil.isCellDateFormatted(cell)) {
+            return cell.getLocalDateTimeCellValue();
+        }
+
+        String text = formatter.formatCellValue(cell, evaluator).trim();
+
+        if (text.isEmpty()) {
+            return null;
+        }
+
+        for (DateTimeFormatter candidate : TIMESTAMP_FORMATS) {
+            try {
+                return LocalDateTime.parse(text, candidate);
+            } catch (DateTimeParseException ignored) {
+                // try the next format
+            }
+        }
+
+        throw new IllegalArgumentException(
+                "Invalid timestamp '" + text + "' in Excel row " + excelRowNumber
+        );
     }
 
     private String getValue(

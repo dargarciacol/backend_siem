@@ -11,7 +11,7 @@ import java.util.UUID;
 @Repository
 public interface EventRepository extends JpaRepository<SecurityEvent, UUID> {
 
-    List<SecurityEvent> findByEventTypeAndActionOrderByTimestampAsc(
+    List<SecurityEvent> findByEventTypeIgnoreCaseAndActionIgnoreCaseOrderByTimestampAsc(
             String eventType,
             String action
     );

@@ -74,7 +74,7 @@ public class DetectionEngineService {
         }
 
         List<SecurityEvent> failedEvents =
-                eventRepository.findByEventTypeAndActionOrderByTimestampAsc(
+                eventRepository.findByEventTypeIgnoreCaseAndActionIgnoreCaseOrderByTimestampAsc(
                         "Security",
                         "Failure"
                 );

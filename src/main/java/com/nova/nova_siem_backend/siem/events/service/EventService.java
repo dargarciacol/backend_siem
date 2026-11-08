@@ -1,5 +1,6 @@
 package com.nova.nova_siem_backend.siem.events.service;
 
+import com.nova.nova_siem_backend.siem.common.exception.ResourceNotFoundException;
 import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
 import com.nova.nova_siem_backend.siem.events.repository.EventRepository;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,6 @@ public class EventService {
 
     public SecurityEvent getEventById(UUID id) {
         return eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with ID: " + id));
     }
 }

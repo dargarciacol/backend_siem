@@ -3,6 +3,8 @@ package com.nova.nova_siem_backend.siem.investigations.service;
 import com.nova.nova_siem_backend.siem.common.exception.ResourceNotFoundException;
 import com.nova.nova_siem_backend.siem.investigations.dto.TimelineDTO;
 import com.nova.nova_siem_backend.siem.investigations.model.Investigation;
+import com.nova.nova_siem_backend.siem.investigations.model.InvestigationEvidence;
+import com.nova.nova_siem_backend.siem.investigations.repository.EvidenceRepository;
 import com.nova.nova_siem_backend.siem.investigations.repository.InvestigationRepository;
 import org.springframework.stereotype.Service;
 
@@ -17,8 +19,11 @@ public class TimelineService {
 
     private final InvestigationRepository investigationRepository;
 
-    public TimelineService(InvestigationRepository investigationRepository) {
+    private final EvidenceRepository evidenceRepository;
+
+    public TimelineService(InvestigationRepository investigationRepository, EvidenceRepository evidenceRepository) {
         this.investigationRepository = investigationRepository;
+        this.evidenceRepository = evidenceRepository;
     }
 
     public List<TimelineDTO> generateInvestigationTimeline(UUID investigationId) {
@@ -45,8 +50,18 @@ public class TimelineService {
                     .build());
         }
 
+        for (InvestigationEvidence ev : evidenceRepository.findByInvestigationId(investigationId)) {
+            timeline.add(TimelineDTO.builder()
+                    .timestamp(ev.getCreatedAt())
+                    .category("EVIDENCE_ADDED")
+                    .title("Evidence: " + ev.getEvidenceType())
+                    .description(ev.getDescription())
+                    .source("Analyst")
+                    .build());
+        }
+
         return timeline.stream()
-                .sorted(Comparator.comparing(TimelineDTO::getTimestamp))
+                .sorted(Comparator.comparing(TimelineDTO::getTimestamp, Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
 }

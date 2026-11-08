@@ -1,6 +1,8 @@
 
 package com.nova.nova_siem_backend.siem.alerts.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import com.nova.nova_siem_backend.siem.common.audit.AuditEntity;
 import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
 import jakarta.persistence.*;
@@ -32,6 +34,7 @@ public class SecurityAlert extends AuditEntity {
     @Column(name = "correlation_key", unique = true, length = 255)
     private String correlationKey;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private SecurityEvent sourceEvent;

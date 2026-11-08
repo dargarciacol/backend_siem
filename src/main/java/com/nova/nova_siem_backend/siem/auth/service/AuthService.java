@@ -5,6 +5,7 @@ import com.nova.nova_siem_backend.siem.auth.dto.LoginRequest;
 import com.nova.nova_siem_backend.siem.auth.model.User;
 import com.nova.nova_siem_backend.siem.auth.repository.UserRepository;
 import com.nova.nova_siem_backend.siem.common.exception.BusinessException;
+import com.nova.nova_siem_backend.siem.common.exception.InvalidCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername().trim())
                 .filter(User::isActive)
                 .filter(candidate -> passwordEncoder.matches(request.getPassword(), candidate.getPassword()))
-                .orElseThrow(() -> new BusinessException("Invalid username or password."));
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password."));
 
         return new AuthResponse(user.getUsername(), user.getFullName(), user.getRole().name());
     }

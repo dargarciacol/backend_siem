@@ -1,5 +1,7 @@
 package com.nova.nova_siem_backend.siem.investigations.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import com.nova.nova_siem_backend.siem.common.audit.AuditEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,6 +21,7 @@ public class IOC extends AuditEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "investigation_id", nullable = false)
     private Investigation investigation;
