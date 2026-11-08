@@ -23,17 +23,16 @@ public class ExcelIngestionController {
     public ResponseEntity<ApiResponse> uploadExcelEvents(
             @RequestParam("file") MultipartFile file) {
 
-        // 1. Validación temprana: archivo vacío
+        // 1. Validar archivo vacío
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(
                     ApiResponse.error(
-                            "El archivo recibido está vacío.",
-                            "FILE_EMPTY"
+                            "El archivo recibido está vacío."
                     )
             );
         }
 
-        // 2. Validación temprana: extensión del archivo
+        // 2. Validar extensión
         String filename = file.getOriginalFilename();
 
         if (filename == null ||
@@ -41,15 +40,17 @@ public class ExcelIngestionController {
                         !filename.toLowerCase().endsWith(".xls"))) {
 
             return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Formato inválido. Se requiere un archivo Excel (.xlsx o .xls).",
-                            "INVALID_FORMAT")
+                    ApiResponse.error(
+                            "Formato inválido. Se requiere un archivo Excel (.xlsx o .xls)."
+                    )
             );
         }
 
-        // 3. Procesamiento real
-        Map<String, Object> result = ingestionService.processExcelFile(file);
+        // 3. Procesar archivo
+        Map<String, Object> result =
+                ingestionService.processExcelFile(file);
 
-        // 4. Respuesta estandarizada
+        // 4. Retornar respuesta
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Archivo Excel procesado correctamente.",
