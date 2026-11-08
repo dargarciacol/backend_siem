@@ -1,3 +1,4 @@
+
 package com.nova.nova_siem_backend.siem.ingestion.controller;
 
 import com.nova.nova_siem_backend.siem.common.response.ApiResponse;
@@ -19,30 +20,41 @@ public class ExcelIngestionController {
     }
 
     @PostMapping("/excel")
-    public ResponseEntity<ApiResponse>> uploadExcelEvents(
+    public ResponseEntity<ApiResponse> uploadExcelEvents(
             @RequestParam("file") MultipartFile file) {
 
-        // 1. Validación temprana: Archivo vacío
-        if (file.isEmpty()) {
+        // 1. Validación temprana: archivo vacío
+        if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(
-                    ApiResponse.error("El archivo recibido está vacío.", "FILE_EMPTY")
+                    ApiResponse.error(
+                            "El archivo recibido está vacío.",
+                            "FILE_EMPTY"
+                    )
             );
         }
 
-        // 2. Validación temprana: Extensión del archivo
+        // 2. Validación temprana: extensión del archivo
         String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.toLowerCase().endsWith(".xlsx") && !filename.toLowerCase().endsWith(".xls"))) {
+
+        if (filename == null ||
+                (!filename.toLowerCase().endsWith(".xlsx") &&
+                        !filename.toLowerCase().endsWith(".xls"))) {
+
             return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Formato inválido. Se requiere un archivo Excel (.xlsx o .xls).", "INVALID_FORMAT")
+                    ApiResponse.error("Formato inválido. Se requiere un archivo Excel (.xlsx o .xls).",
+                            "INVALID_FORMAT")
             );
         }
 
         // 3. Procesamiento real
         Map<String, Object> result = ingestionService.processExcelFile(file);
 
-        // 4. Retorno estandarizado
+        // 4. Respuesta estandarizada
         return ResponseEntity.ok(
-                ApiResponse.success("Archivo Excel procesado correctamente.", result)
+                ApiResponse.success(
+                        "Archivo Excel procesado correctamente.",
+                        result
+                )
         );
     }
 }
