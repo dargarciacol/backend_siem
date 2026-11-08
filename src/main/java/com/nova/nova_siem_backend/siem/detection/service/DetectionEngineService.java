@@ -83,15 +83,11 @@ public class DetectionEngineService {
 
         for (SecurityEvent event : failedEvents) {
 
-            if (event.getTimestamp() == null) {
-                continue;
-            }
-
-            if (event.getSourceIp() == null || event.getSourceIp().isBlank()) {
-                continue;
-            }
-
-            if (event.getUserIdentity() == null || event.getUserIdentity().isBlank()) {
+            if (event.getTimestamp() == null
+                    || event.getSourceIp() == null
+                    || event.getSourceIp().isBlank()
+                    || event.getUserIdentity() == null
+                    || event.getUserIdentity().isBlank()) {
                 continue;
             }
 
@@ -106,7 +102,6 @@ public class DetectionEngineService {
         for (Map.Entry<String, List<SecurityEvent>> entry : eventsByIp.entrySet()) {
 
             String sourceIp = entry.getKey();
-
             List<SecurityEvent> ipEvents = entry.getValue();
 
             ipEvents.sort(Comparator.comparing(SecurityEvent::getTimestamp));
@@ -115,6 +110,9 @@ public class DetectionEngineService {
 
             int start = 0;
             int end = 0;
+
+            SecurityEvent episodeRepresentative = null;
+            java.time.LocalDateTime episodeEnd = null;
 
             while (start < ipEvents.size()) {
 
@@ -135,9 +133,7 @@ public class DetectionEngineService {
                         break;
                     }
 
-                    String account = currentEvent.getUserIdentity()
-                            .trim()
-                            .toLowerCase(Locale.ROOT);
+                    String account = normalizeAccount(currentEvent);
 
                     accountCounts.merge(account, 1, Integer::sum);
 
@@ -146,50 +142,51 @@ public class DetectionEngineService {
 
                 if (accountCounts.size() >= MIN_DISTINCT_ACCOUNTS) {
 
-                    SecurityEvent representativeEvent = ipEvents.get(start);
+                    SecurityEvent windowStart = ipEvents.get(start);
+                    SecurityEvent windowEnd = ipEvents.get(end - 1);
 
-                    String correlationKey = buildCorrelationKey(
-                            sourceIp,
-                            representativeEvent
-                    );
+                    if (episodeEnd == null
+                            || windowStart.getTimestamp().isAfter(episodeEnd)) {
 
-                    boolean alreadyExists =
-                            alertRepository.existsByCorrelationKey(correlationKey);
+                        episodeRepresentative = windowStart;
 
-                    if (!alreadyExists) {
-
-                        SecurityAlert alert = new SecurityAlert();
-
-                        alert.setRuleTriggered(passwordSprayingRule.getName());
-                        alert.setSeverity(passwordSprayingRule.getSeverity());
-                        alert.setStatus(AlertStatus.NEW);
-                        alert.setSourceEvent(representativeEvent);
-                        alert.setCorrelationKey(correlationKey);
-
-                        alertRepository.save(alert);
-
-                        newHits++;
-                    }
-
-                    start = end;
-                    accountCounts.clear();
-
-                } else {
-
-                    if (start < end) {
-
-                        String account = ipEvents.get(start)
-                                .getUserIdentity()
-                                .trim()
-                                .toLowerCase(Locale.ROOT);
-
-                        accountCounts.computeIfPresent(account, (key, count) ->
-                                count == 1 ? null : count - 1
+                        String correlationKey = buildCorrelationKey(
+                                sourceIp,
+                                episodeRepresentative
                         );
+
+                        boolean alreadyExists =
+                                alertRepository.existsByCorrelationKey(correlationKey);
+
+                        if (!alreadyExists) {
+
+                            SecurityAlert alert = new SecurityAlert();
+
+                            alert.setRuleTriggered(passwordSprayingRule.getName());
+                            alert.setSeverity(passwordSprayingRule.getSeverity());
+                            alert.setStatus(AlertStatus.NEW);
+                            alert.setSourceEvent(episodeRepresentative);
+                            alert.setCorrelationKey(correlationKey);
+
+                            alertRepository.save(alert);
+
+                            newHits++;
+                        }
                     }
 
-                    start++;
+                    episodeEnd = windowEnd.getTimestamp();
                 }
+
+                if (start < end) {
+
+                    String account = normalizeAccount(ipEvents.get(start));
+
+                    accountCounts.computeIfPresent(account, (key, count) ->
+                            count == 1 ? null : count - 1
+                    );
+                }
+
+                start++;
             }
         }
 
@@ -203,6 +200,12 @@ public class DetectionEngineService {
 
             ruleRepository.save(passwordSprayingRule);
         }
+    }
+
+    private String normalizeAccount(SecurityEvent event) {
+        return event.getUserIdentity()
+                .trim()
+                .toLowerCase(Locale.ROOT);
     }
 
     private String buildCorrelationKey(

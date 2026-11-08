@@ -5,6 +5,7 @@ import com.nova.nova_siem_backend.siem.common.response.ApiResponse;
 import com.nova.nova_siem_backend.siem.detection.model.DetectionRule;
 import com.nova.nova_siem_backend.siem.detection.service.DetectionRuleService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class DetectionRuleController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SOC_L2', 'SOC_L3', 'COORDINATOR', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<DetectionRule>>> getAllRules() {
         List<DetectionRule> rules = ruleService.getAllRules();
 
@@ -52,6 +54,7 @@ public class DetectionRuleController {
     }
 
     @PostMapping("/reprocess")
+    @PreAuthorize("hasAnyRole('SOC_L3', 'COORDINATOR', 'MANAGER')")
     public ResponseEntity<ApiResponse<String>> reprocessHistoricalEvents() {
 
         ruleService.reprocessHistoricalEvents();
@@ -64,4 +67,3 @@ public class DetectionRuleController {
         );
     }
 }
-
