@@ -25,6 +25,10 @@
 		<poi.version>5.4.1</poi.version>
 		<flyway.version>10.8.1</flyway.version>
 		<lombok.version>1.18.36</lombok.version>
+
+		<!-- JWT / OPENAPI -->
+		<jjwt.version>0.12.6</jjwt.version>
+		<springdoc.version>2.5.0</springdoc.version>
 	</properties>
 
 	<dependencies>
@@ -80,6 +84,34 @@
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>${poi.version}</version>
+		</dependency>
+
+		<!-- JWT AUTHENTICATION -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- OPENAPI / SWAGGER UI -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 
 		<!-- DEVELOPMENT -->
