@@ -3,9 +3,9 @@ package com.nova.nova_siem_backend.siem.dashboard.service;
 import com.nova.nova_siem_backend.siem.alerts.model.AlertStatus;
 import com.nova.nova_siem_backend.siem.alerts.repository.AlertRepository;
 import com.nova.nova_siem_backend.siem.dashboard.dto.DashboardSummaryDTO;
-import com.nova.siem.events.repository.EventRepository;
-import com.nova.siem.incidents.model.IncidentStatus;
-import com.nova.siem.incidents.repository.IncidentRepository;
+import com.nova.nova_siem_backend.siem.events.repository.EventRepository;
+import com.nova.nova_siem_backend.siem.incidents.model.IncidentStatus;
+import com.nova.nova_siem_backend.siem.incidents.repository.IncidentRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;

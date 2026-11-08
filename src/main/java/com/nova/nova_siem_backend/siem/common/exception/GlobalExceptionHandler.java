@@ -1,6 +1,6 @@
 package com.nova.nova_siem_backend.siem.common.exception;
 
-import com.nova.siem.common.response.ApiResponse;
+import com.nova.nova_siem_backend.siem.common.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
