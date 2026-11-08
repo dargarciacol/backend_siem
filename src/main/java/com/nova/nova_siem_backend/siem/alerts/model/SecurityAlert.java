@@ -1,3 +1,4 @@
+
 package com.nova.nova_siem_backend.siem.alerts.model;
 
 import com.nova.nova_siem_backend.siem.common.audit.AuditEntity;
@@ -27,6 +28,9 @@ public class SecurityAlert extends AuditEntity {
 
     @Column(name = "assigned_to")
     private String assignedTo;
+
+    @Column(name = "correlation_key", unique = true, length = 255)
+    private String correlationKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
@@ -70,6 +74,14 @@ public class SecurityAlert extends AuditEntity {
 
     public void setAssignedTo(String assignedTo) {
         this.assignedTo = assignedTo;
+    }
+
+    public String getCorrelationKey() {
+        return correlationKey;
+    }
+
+    public void setCorrelationKey(String correlationKey) {
+        this.correlationKey = correlationKey;
     }
 
     public SecurityEvent getSourceEvent() {
