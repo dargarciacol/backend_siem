@@ -16,20 +16,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class DetectionEngineService {
 
     private static final int MIN_DISTINCT_ACCOUNTS = 5;
-    private static final long WINDOW_SECONDS = 60;
-
+    private static final Duration DETECTION_WINDOW = Duration.ofSeconds(60);
     private static final String RULE_NAME = "Password Spraying";
 
     private final DetectionRuleRepository ruleRepository;
@@ -53,9 +51,18 @@ public class DetectionEngineService {
             return;
         }
 
-        List<DetectionRule> activeRules = ruleRepository.findByActiveTrue();
+        evaluatePasswordSpraying();
+    }
 
-        DetectionRule passwordSprayingRule = activeRules.stream()
+    @Transactional
+    public void reprocessHistoricalEvents() {
+        evaluatePasswordSpraying();
+    }
+
+    private void evaluatePasswordSpraying() {
+
+        DetectionRule passwordSprayingRule = ruleRepository.findByActiveTrue()
+                .stream()
                 .filter(rule -> rule.getCategory() == RuleCategory.CREDENTIAL_ACCESS)
                 .filter(rule -> rule.getName() != null
                         && rule.getName().equalsIgnoreCase(RULE_NAME))
@@ -75,6 +82,10 @@ public class DetectionEngineService {
         Map<String, List<SecurityEvent>> eventsByIp = new LinkedHashMap<>();
 
         for (SecurityEvent event : failedEvents) {
+
+            if (event.getTimestamp() == null) {
+                continue;
+            }
 
             if (event.getSourceIp() == null || event.getSourceIp().isBlank()) {
                 continue;
@@ -100,28 +111,27 @@ public class DetectionEngineService {
 
             ipEvents.sort(Comparator.comparing(SecurityEvent::getTimestamp));
 
+            Map<String, Integer> accountCounts = new HashMap<>();
+
             int start = 0;
+            int end = 0;
 
             while (start < ipEvents.size()) {
 
-                SecurityEvent firstEvent = ipEvents.get(start);
-
-                Set<String> distinctAccounts = new HashSet<>();
-
-                SecurityEvent representativeEvent = firstEvent;
-
-                int end = start;
+                if (end < start) {
+                    end = start;
+                }
 
                 while (end < ipEvents.size()) {
 
                     SecurityEvent currentEvent = ipEvents.get(end);
 
-                    long seconds = Duration.between(
-                            firstEvent.getTimestamp(),
+                    Duration elapsed = Duration.between(
+                            ipEvents.get(start).getTimestamp(),
                             currentEvent.getTimestamp()
-                    ).getSeconds();
+                    );
 
-                    if (seconds > WINDOW_SECONDS) {
+                    if (elapsed.compareTo(DETECTION_WINDOW) > 0) {
                         break;
                     }
 
@@ -129,16 +139,18 @@ public class DetectionEngineService {
                             .trim()
                             .toLowerCase(Locale.ROOT);
 
-                    distinctAccounts.add(account);
+                    accountCounts.merge(account, 1, Integer::sum);
 
                     end++;
                 }
 
-                if (distinctAccounts.size() >= MIN_DISTINCT_ACCOUNTS) {
+                if (accountCounts.size() >= MIN_DISTINCT_ACCOUNTS) {
+
+                    SecurityEvent representativeEvent = ipEvents.get(start);
 
                     String correlationKey = buildCorrelationKey(
                             sourceIp,
-                            firstEvent
+                            representativeEvent
                     );
 
                     boolean alreadyExists =
@@ -158,9 +170,26 @@ public class DetectionEngineService {
 
                         newHits++;
                     }
-                }
 
-                start = end;
+                    start = end;
+                    accountCounts.clear();
+
+                } else {
+
+                    if (start < end) {
+
+                        String account = ipEvents.get(start)
+                                .getUserIdentity()
+                                .trim()
+                                .toLowerCase(Locale.ROOT);
+
+                        accountCounts.computeIfPresent(account, (key, count) ->
+                                count == 1 ? null : count - 1
+                        );
+                    }
+
+                    start++;
+                }
             }
         }
 
