@@ -1,3 +1,4 @@
+
 package com.nova.nova_siem_backend.siem.security;
 
 import io.jsonwebtoken.JwtException;
@@ -29,6 +30,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    // =========================================================
+    // EXCLUDE CORS PREFLIGHT REQUESTS
+    // =========================================================
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        return "OPTIONS".equalsIgnoreCase(request.getMethod());
+    }
+
+    // =========================================================
+    // JWT AUTHENTICATION
+    // =========================================================
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -36,10 +51,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authorizationHeader = request.getHeader("Authorization");
+        String authorizationHeader =
+                request.getHeader("Authorization");
 
-        if (authorizationHeader == null ||
-                !authorizationHeader.startsWith("Bearer ")) {
+        // No existe token: continuar con la cadena de filtros.
+        if (
+                authorizationHeader == null ||
+                        !authorizationHeader.startsWith("Bearer ")
+        ) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -47,15 +66,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authorizationHeader.substring(7);
 
         try {
+
+            // Extraer usuario desde el JWT.
             String username = jwtService.extractUsername(token);
 
-            if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (
+                    username != null &&
+                            SecurityContextHolder.getContext()
+                                    .getAuthentication() == null
+            ) {
 
+                // Cargar información del usuario.
                 UserDetails userDetails =
                         userDetailsService.loadUserByUsername(username);
 
+                // Verificar que la cuenta esté habilitada.
                 if (userDetails.isEnabled()) {
+
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
@@ -73,12 +100,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
 
-        } catch (JwtException | IllegalArgumentException |
-                 UsernameNotFoundException exception) {
+        } catch (
+                JwtException |
+                IllegalArgumentException |
+                UsernameNotFoundException exception
+        ) {
 
+            // Limpiar autenticación si el token no es válido.
             SecurityContextHolder.clearContext();
         }
 
+        // Continuar con la cadena de filtros.
         filterChain.doFilter(request, response);
     }
 }

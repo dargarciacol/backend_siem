@@ -1,5 +1,6 @@
 package com.nova.nova_siem_backend.siem.ingestion.controller;
 
+import com.nova.nova_siem_backend.siem.common.response.ApiResponse;
 import com.nova.nova_siem_backend.siem.ingestion.service.ExcelIngestionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +19,30 @@ public class ExcelIngestionController {
     }
 
     @PostMapping("/excel")
-    public ResponseEntity<Map<String, Object>> uploadExcelEvents(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse>> uploadExcelEvents(
+            @RequestParam("file") MultipartFile file) {
+
+        // 1. Validación temprana: Archivo vacío
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("El archivo recibido está vacío.", "FILE_EMPTY")
+            );
+        }
+
+        // 2. Validación temprana: Extensión del archivo
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.toLowerCase().endsWith(".xlsx") && !filename.toLowerCase().endsWith(".xls"))) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Formato inválido. Se requiere un archivo Excel (.xlsx o .xls).", "INVALID_FORMAT")
+            );
+        }
+
+        // 3. Procesamiento real
         Map<String, Object> result = ingestionService.processExcelFile(file);
-        return ResponseEntity.ok(result);
+
+        // 4. Retorno estandarizado
+        return ResponseEntity.ok(
+                ApiResponse.success("Archivo Excel procesado correctamente.", result)
+        );
     }
 }
