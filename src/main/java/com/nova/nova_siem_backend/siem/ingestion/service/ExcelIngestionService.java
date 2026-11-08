@@ -4,11 +4,11 @@ package com.nova.nova_siem_backend.siem.ingestion.service;
 import com.nova.nova_siem_backend.siem.events.model.EventSeverity;
 import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
 import com.nova.nova_siem_backend.siem.events.repository.EventRepository;
-import com.nova.nova_siem_backend.siem.ingestion.validator.ExcelFileValidator;
 import com.nova.nova_siem_backend.siem.ingestion.event.EventsIngestedEvent;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.annotation.Transactional;
+import com.nova.nova_siem_backend.siem.ingestion.validator.ExcelFileValidator;
+
 import org.apache.poi.ss.usermodel.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,20 +45,31 @@ public class ExcelIngestionService {
              Workbook workbook = WorkbookFactory.create(inputStream)) {
 
             if (workbook.getNumberOfSheets() == 0) {
-                throw new IllegalArgumentException("The Excel file has no sheets.");
+                throw new IllegalArgumentException(
+                        "The Excel file has no sheets."
+                );
             }
 
             Sheet sheet = workbook.getSheetAt(0);
 
             if (sheet.getPhysicalNumberOfRows() < 2) {
-                throw new IllegalArgumentException("The Excel file contains no data rows.");
+                throw new IllegalArgumentException(
+                        "The Excel file contains no data rows."
+                );
             }
 
             DataFormatter formatter = new DataFormatter();
+
             FormulaEvaluator evaluator =
                     workbook.getCreationHelper().createFormulaEvaluator();
 
             Row headerRow = sheet.getRow(0);
+
+            if (headerRow == null) {
+                throw new IllegalArgumentException(
+                        "The Excel file has no header row."
+                );
+            }
 
             Map<String, Integer> columns = new HashMap<>();
 
@@ -97,14 +108,37 @@ public class ExcelIngestionService {
                     continue;
                 }
 
-                String user = getValue(row, columns, "user", formatter, evaluator);
-                String sourceIp = getValue(row, columns, "source_ip", formatter, evaluator);
-                String destination = getValue(row, columns, "destination", formatter, evaluator);
-                String logSource = getValue(row, columns, "log_source", formatter, evaluator);
-                String description = getValue(row, columns, "event_description", formatter, evaluator);
-                String commandLine = getValue(row, columns, "process_commandline", formatter, evaluator);
-                String result = getValue(row, columns, "result", formatter, evaluator);
-                String severityValue = getValue(row, columns, "severity", formatter, evaluator);
+                String user = getValue(
+                        row, columns, "user", formatter, evaluator
+                );
+
+                String sourceIp = getValue(
+                        row, columns, "source_ip", formatter, evaluator
+                );
+
+                String destination = getValue(
+                        row, columns, "destination", formatter, evaluator
+                );
+
+                String logSource = getValue(
+                        row, columns, "log_source", formatter, evaluator
+                );
+
+                String description = getValue(
+                        row, columns, "event_description", formatter, evaluator
+                );
+
+                String commandLine = getValue(
+                        row, columns, "process_commandline", formatter, evaluator
+                );
+
+                String result = getValue(
+                        row, columns, "result", formatter, evaluator
+                );
+
+                String severityValue = getValue(
+                        row, columns, "severity", formatter, evaluator
+                );
 
                 if (user.isBlank() && sourceIp.isBlank()
                         && destination.isBlank() && logSource.isBlank()
@@ -122,12 +156,15 @@ public class ExcelIngestionService {
                 SecurityEvent event = new SecurityEvent();
 
                 event.setTimestamp(LocalDateTime.now());
+
                 event.setUserIdentity(
                         user.isBlank() ? "UNKNOWN" : user
                 );
+
                 event.setSourceIp(
                         sourceIp.isBlank() ? "0.0.0.0" : sourceIp
                 );
+
                 event.setEventType(logSource);
                 event.setAction(result);
                 event.setSeverity(parseSeverity(severityValue));
@@ -155,14 +192,25 @@ public class ExcelIngestionService {
                 );
             }
 
-            eventRepository.saveAll(events);
+            // Persist imported events.
+            List<SecurityEvent> savedEvents =
+                    eventRepository.saveAll(events);
+
+            // Notify the detection pipeline after the transaction commits.
+            eventPublisher.publishEvent(
+                    new EventsIngestedEvent(
+                            savedEvents.stream()
+                                    .map(SecurityEvent::getId)
+                                    .toList()
+                    )
+            );
 
             Map<String, Object> response = new LinkedHashMap<>();
 
             response.put("status", "success");
             response.put("message", "Excel events successfully imported.");
             response.put("fileName", file.getOriginalFilename());
-            response.put("ingestedEventsCount", events.size());
+            response.put("ingestedEventsCount", savedEvents.size());
 
             return response;
 
@@ -204,11 +252,21 @@ public class ExcelIngestionService {
         String normalized = value.trim().toUpperCase(Locale.ROOT);
 
         return switch (normalized) {
-            case "CRITICAL", "CRIT", "SEVERE" -> EventSeverity.CRITICAL;
-            case "HIGH", "ERROR" -> EventSeverity.HIGH;
-            case "MEDIUM", "MODERATE", "WARNING", "WARN" -> EventSeverity.MEDIUM;
-            case "LOW" -> EventSeverity.LOW;
-            case "INFO", "INFORMATIONAL", "INFORMATION" -> EventSeverity.INFO;
+            case "CRITICAL", "CRIT", "SEVERE" ->
+                    EventSeverity.CRITICAL;
+
+            case "HIGH", "ERROR" ->
+                    EventSeverity.HIGH;
+
+            case "MEDIUM", "MODERATE", "WARNING", "WARN" ->
+                    EventSeverity.MEDIUM;
+
+            case "LOW" ->
+                    EventSeverity.LOW;
+
+            case "INFO", "INFORMATIONAL", "INFORMATION" ->
+                    EventSeverity.INFO;
+
             default -> throw new IllegalArgumentException(
                     "Unsupported severity: " + value
             );
