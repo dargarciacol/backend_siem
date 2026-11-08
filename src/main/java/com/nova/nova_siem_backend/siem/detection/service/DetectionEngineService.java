@@ -45,16 +45,24 @@ public class DetectionEngineService {
         }
     }
 
+
     private boolean evaluateLogic(String sigmaLogic, SecurityEvent event) {
+
         if (sigmaLogic == null || event == null) {
             return false;
         }
 
-        String action = event.getAction() != null ? event.getAction().toLowerCase() : "";
-        String eventType = event.getEventType() != null ? event.getEventType().toLowerCase() : "";
+        String action = event.getAction() != null
+                ? event.getAction().toLowerCase()
+                : "";
+
+        String eventType = event.getEventType() != null
+                ? event.getEventType().toLowerCase()
+                : "";
+
         String logic = sigmaLogic.toLowerCase();
 
-        return (action.length() > 2 && logic.contains(action)) ||
-                (eventType.length() > 2 && logic.contains(eventType));
+        return (action.length() > 2 && logic.contains(action))
+                || (eventType.length() > 2 && logic.contains(eventType));
     }
 }

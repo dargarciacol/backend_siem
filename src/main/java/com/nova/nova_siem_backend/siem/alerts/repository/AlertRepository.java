@@ -8,4 +8,9 @@ import java.util.UUID;
 
 @Repository
 public interface AlertRepository extends JpaRepository<SecurityAlert, UUID> {
+
+    boolean existsBySourceEvent_IdAndRuleTriggered(
+            UUID sourceEventId,
+            String ruleTriggered
+    );
 }
