@@ -18,7 +18,9 @@ public class ExcelFileValidator {
         boolean isExcel = (contentType != null &&
                 (contentType.equals("application/vnd.ms-excel") ||
                         contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")))
-                || (fileName != null && (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")));
+                || (fileName != null &&
+                (fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".xls") ||
+                        fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".xlsx")));
 
         if (!isExcel) {
             throw new BusinessException("Invalid file format. Only Excel files (.xls, .xlsx) are supported.");

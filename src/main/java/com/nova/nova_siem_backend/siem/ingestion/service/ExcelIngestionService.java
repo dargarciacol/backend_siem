@@ -5,7 +5,9 @@ import com.nova.nova_siem_backend.siem.events.model.EventSeverity;
 import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
 import com.nova.nova_siem_backend.siem.events.repository.EventRepository;
 import com.nova.nova_siem_backend.siem.ingestion.validator.ExcelFileValidator;
-
+import com.nova.nova_siem_backend.siem.ingestion.event.EventsIngestedEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Transactional;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +22,16 @@ public class ExcelIngestionService {
 
     private final EventRepository eventRepository;
     private final ExcelFileValidator fileValidator;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ExcelIngestionService(
             EventRepository eventRepository,
-            ExcelFileValidator fileValidator) {
+            ExcelFileValidator fileValidator,
+            ApplicationEventPublisher eventPublisher) {
+
         this.eventRepository = eventRepository;
         this.fileValidator = fileValidator;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
