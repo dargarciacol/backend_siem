@@ -1,9 +1,13 @@
 package com.nova.nova_siem_backend.siem.incidents.model;
 
 import com.nova.nova_siem_backend.siem.alerts.model.AlertSeverity;
+import com.nova.nova_siem_backend.siem.alerts.model.SecurityAlert;
 import com.nova.nova_siem_backend.siem.common.audit.AuditEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -36,6 +40,11 @@ public class SecurityIncident extends AuditEntity {
 
     @Column(name = "confidence_level")
     private Integer confidenceLevel;
+
+    // --- NUEVA RELACIÓN HACIA ALERTAS ---
+    @JsonIgnore
+    @OneToMany(mappedBy = "incident", fetch = FetchType.LAZY)
+    private List<SecurityAlert> alerts = new ArrayList<>();
 
     public UUID getId() {
         return id;
@@ -99,5 +108,13 @@ public class SecurityIncident extends AuditEntity {
 
     public void setConfidenceLevel(Integer confidenceLevel) {
         this.confidenceLevel = confidenceLevel;
+    }
+
+    public List<SecurityAlert> getAlerts() {
+        return alerts;
+    }
+
+    public void setAlerts(List<SecurityAlert> alerts) {
+        this.alerts = alerts;
     }
 }

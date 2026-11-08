@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,4 +28,7 @@ public class IncidentRequestDTO {
     private String primaryHypothesis;
 
     private Integer confidenceLevel;
+
+    // Opcional: alertas existentes a asociar al incidente.
+    private List<UUID> alertIds;
 }

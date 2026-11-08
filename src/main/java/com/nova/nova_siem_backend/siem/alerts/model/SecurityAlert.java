@@ -5,8 +5,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import com.nova.nova_siem_backend.siem.common.audit.AuditEntity;
 import com.nova.nova_siem_backend.siem.events.model.SecurityEvent;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.nova.nova_siem_backend.siem.incidents.model.SecurityIncident;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -93,5 +97,30 @@ public class SecurityAlert extends AuditEntity {
 
     public void setSourceEvent(SecurityEvent sourceEvent) {
         this.sourceEvent = sourceEvent;
+    }
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "incident_id")
+    private SecurityIncident incident;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "alert", fetch = FetchType.LAZY)
+    private List<SecurityEvent> events = new ArrayList<>();
+
+    public SecurityIncident getIncident() {
+        return incident;
+    }
+
+    public void setIncident(SecurityIncident incident) {
+        this.incident = incident;
+    }
+
+    public List<SecurityEvent> getEvents() {
+        return events;
+    }
+
+    public void setEvents(List<SecurityEvent> events) {
+        this.events = events;
     }
 }

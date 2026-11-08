@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface IocRepository extends JpaRepository<IOC, UUID> {
     List<IOC> findByInvestigationId(UUID investigationId);
+
+    boolean existsByInvestigationIdAndIocTypeIgnoreCaseAndValueIgnoreCase(UUID investigationId, String iocType, String value);
 }

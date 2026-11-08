@@ -1,5 +1,7 @@
 package com.nova.nova_siem_backend.siem.incidents.service;
 
+import com.nova.nova_siem_backend.siem.alerts.model.SecurityAlert;
+import com.nova.nova_siem_backend.siem.alerts.repository.AlertRepository;
 import com.nova.nova_siem_backend.siem.common.exception.BusinessException;
 import com.nova.nova_siem_backend.siem.common.exception.ResourceNotFoundException;
 import com.nova.nova_siem_backend.siem.incidents.dto.IncidentRequestDTO;
@@ -11,15 +13,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class IncidentService {
 
     private final IncidentRepository incidentRepository;
+    private final AlertRepository alertRepository;
 
-    public IncidentService(IncidentRepository incidentRepository) {
+    public IncidentService(IncidentRepository incidentRepository, AlertRepository alertRepository) {
         this.incidentRepository = incidentRepository;
+        this.alertRepository = alertRepository;
     }
 
     public Page<SecurityIncident> getAllIncidents(Pageable pageable) {
@@ -42,7 +47,17 @@ public class IncidentService {
         incident.setConfidenceLevel(confidence);
         incident.setStatus(IncidentStatus.TRIAGE);
         incident.setAssignedTo(username);
-        return incidentRepository.save(incident);
+        SecurityIncident saved = incidentRepository.save(incident);
+
+        if (request.getAlertIds() != null && !request.getAlertIds().isEmpty()) {
+            List<SecurityAlert> alerts = alertRepository.findAllById(request.getAlertIds());
+            if (alerts.size() != request.getAlertIds().stream().distinct().count()) {
+                throw new ResourceNotFoundException("One or more alerts were not found.");
+            }
+            alerts.forEach(a -> a.setIncident(saved));
+            alertRepository.saveAll(alerts);
+        }
+        return saved;
     }
 
     public SecurityIncident getIncidentById(UUID id) {

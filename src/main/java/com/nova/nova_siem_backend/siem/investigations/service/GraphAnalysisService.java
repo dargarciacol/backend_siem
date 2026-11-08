@@ -2,6 +2,8 @@ package com.nova.nova_siem_backend.siem.investigations.service;
 
 import com.nova.nova_siem_backend.siem.common.exception.ResourceNotFoundException;
 import com.nova.nova_siem_backend.siem.incidents.model.SecurityIncident;
+import com.nova.nova_siem_backend.siem.alerts.model.SecurityAlert; // Ajusta el paquete según tu estructura
+import com.nova.nova_siem_backend.siem.events.model.SecurityEvent; // Ajusta el paquete según tu estructura
 import com.nova.nova_siem_backend.siem.investigations.dto.GraphNodeDTO;
 import com.nova.nova_siem_backend.siem.investigations.model.IOC;
 import com.nova.nova_siem_backend.siem.investigations.model.Investigation;
@@ -43,16 +45,47 @@ public class GraphAnalysisService {
         List<GraphNodeDTO> nodes = new ArrayList<>();
         List<Map<String, Object>> edges = new ArrayList<>();
 
+        // 1. Nodo del Incidente
         Map<String, Object> incMeta = new HashMap<>();
         incMeta.put("severity", String.valueOf(incident.getSeverity()));
         incMeta.put("status", String.valueOf(incident.getStatus()));
         nodes.add(node(incident.getId().toString(), incident.getTitle(), "INCIDENT", incMeta));
 
+        // 2. Nodo del Workspace de Investigación
         Map<String, Object> invMeta = new HashMap<>();
         invMeta.put("verdict", inv.getVerdict() != null ? inv.getVerdict().name() : "PENDING");
         nodes.add(node(inv.getId().toString(), "Investigation Workspace", "INVESTIGATION", invMeta));
         edges.add(edge(incident.getId().toString(), inv.getId().toString(), "HAS_WORKSPACE"));
 
+        // 3. Alertas asociadas al incidente (security_alerts.incident_id) y sus eventos persistidos
+        java.util.Set<String> eventNodes = new java.util.HashSet<>();
+        for (SecurityAlert alert : incident.getAlerts()) {
+            String alertId = "alert_" + alert.getId();
+            Map<String, Object> alertMeta = new HashMap<>();
+            alertMeta.put("severity", String.valueOf(alert.getSeverity()));
+            alertMeta.put("status", String.valueOf(alert.getStatus()));
+            nodes.add(node(alertId, alert.getRuleTriggered(), "ALERT", alertMeta));
+            edges.add(edge(incident.getId().toString(), alertId, "GENERATES_ALERT"));
+
+            java.util.Set<SecurityEvent> related = new java.util.LinkedHashSet<>(alert.getEvents());
+            if (alert.getSourceEvent() != null) {
+                related.add(alert.getSourceEvent());
+            }
+            for (SecurityEvent event : related) {
+                String eventId = "event_" + event.getId();
+                if (eventNodes.add(eventId)) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("sourceIp", event.getSourceIp());
+                    m.put("user", event.getUserIdentity());
+                    m.put("timestamp", String.valueOf(event.getTimestamp()));
+                    m.put("severity", String.valueOf(event.getSeverity()));
+                    nodes.add(node(eventId, event.getEventType() + " / " + event.getAction(), "EVENT", m));
+                }
+                edges.add(edge(alertId, eventId, "TRIGGERED_BY"));
+            }
+        }
+
+        // 5. Nodos de Indicadores de Compromiso (IOCs)
         for (IOC ioc : iocRepository.findByInvestigationId(investigationId)) {
             Map<String, Object> m = new HashMap<>();
             m.put("type", ioc.getIocType());
@@ -63,6 +96,7 @@ public class GraphAnalysisService {
             edges.add(edge(inv.getId().toString(), id, "HAS_IOC"));
         }
 
+        // 6. Nodos de Evidencia Recolectada
         for (InvestigationEvidence ev : evidenceRepository.findByInvestigationId(investigationId)) {
             Map<String, Object> m = new HashMap<>();
             m.put("type", ev.getEvidenceType());

@@ -1,5 +1,6 @@
 package com.nova.nova_siem_backend.siem.events.model;
 
+import com.nova.nova_siem_backend.siem.alerts.model.SecurityAlert;
 import com.nova.nova_siem_backend.siem.common.audit.AuditEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -42,6 +43,11 @@ public class SecurityEvent extends AuditEntity {
 
     @Column(name = "is_synthetic", nullable = false)
     private boolean synthetic;
+
+    // --- NUEVA RELACIÓN HACIA ALERTA ---
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "alert_id")
+    private SecurityAlert alert;
 
     public UUID getId() {
         return id;
@@ -113,5 +119,13 @@ public class SecurityEvent extends AuditEntity {
 
     public void setSynthetic(boolean synthetic) {
         this.synthetic = synthetic;
+    }
+
+    public SecurityAlert getAlert() {
+        return alert;
+    }
+
+    public void setAlert(SecurityAlert alert) {
+        this.alert = alert;
     }
 }
