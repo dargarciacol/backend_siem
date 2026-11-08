@@ -3,17 +3,22 @@ package com.nova.nova_siem_backend.siem.dashboard.dto;
 public class DashboardSummaryDTO {
 
     private long totalEvents;
-    private long activeIncidents;
-    private long openAlerts;
-    private long criticalIncidents;
+    private long activeAlerts;    // Ajustado al nombre del frontend
+    private long openIncidents;   // Ajustado al nombre del frontend
+    private long activeRules;     // Reemplaza criticalIncidents para coincidir con el UI
 
-    public DashboardSummaryDTO(long totalEvents, long activeIncidents, long openAlerts, long criticalIncidents) {
-        this.totalEvents = totalEvents;
-        this.activeIncidents = activeIncidents;
-        this.openAlerts = openAlerts;
-        this.criticalIncidents = criticalIncidents;
+    // Constructor vacío sugerido para facilitar la instanciación en el Service
+    public DashboardSummaryDTO() {
     }
 
+    public DashboardSummaryDTO(long totalEvents, long activeAlerts, long openIncidents, long activeRules) {
+        this.totalEvents = totalEvents;
+        this.activeAlerts = activeAlerts;
+        this.openIncidents = openIncidents;
+        this.activeRules = activeRules;
+    }
+
+    // Getters y Setters
     public long getTotalEvents() {
         return totalEvents;
     }
@@ -22,27 +27,27 @@ public class DashboardSummaryDTO {
         this.totalEvents = totalEvents;
     }
 
-    public long getActiveIncidents() {
-        return activeIncidents;
+    public long getActiveAlerts() {
+        return activeAlerts;
     }
 
-    public void setActiveIncidents(long activeIncidents) {
-        this.activeIncidents = activeIncidents;
+    public void setActiveAlerts(long activeAlerts) {
+        this.activeAlerts = activeAlerts;
     }
 
-    public long getOpenAlerts() {
-        return openAlerts;
+    public long getOpenIncidents() {
+        return openIncidents;
     }
 
-    public void setOpenAlerts(long openAlerts) {
-        this.openAlerts = openAlerts;
+    public void setOpenIncidents(long openIncidents) {
+        this.openIncidents = openIncidents;
     }
 
-    public long getCriticalIncidents() {
-        return criticalIncidents;
+    public long getActiveRules() {
+        return activeRules;
     }
 
-    public void setCriticalIncidents(long criticalIncidents) {
-        this.criticalIncidents = criticalIncidents;
+    public void setActiveRules(long activeRules) {
+        this.activeRules = activeRules;
     }
 }
